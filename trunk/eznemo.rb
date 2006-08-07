@@ -1,7 +1,7 @@
 #!/usr/bin/ruby
 #
 # eznemo.rb - A simple host monitoring with TCP ping.
-# ver.0.5alpha (2006-07-17)
+# ver.0.6alpha (2006-08-06)
 #
 
 ##
@@ -15,7 +15,7 @@ require 'thread'
 ##
 ## System parameters
 ##
-S_SYSTEMNAME = 'EzNemo ver.0.5alpha - 2006 CYANandBLUE'
+S_SYSTEMNAME = 'EzNemo ver.0.6alpha - (c) 2006 CYANandBLUE'
 I_PINGTIMEOUT_MAX = 10
 I_PINGINTERVAL_MIN = 60
 I_PINGRETRY_MAX = 10
@@ -41,7 +41,10 @@ $h_host = {}
 ##
 ## Pre-defined functions
 ##
+
+# Sends and email through the directed SMTP server.
 def email(body)
+  body = "Subject: EzNemo ALARM\n\n" + body
   Net::SMTP.start($s_smtpserver, $i_smtpport, $s_smtpdomain) do |smtp|
     smtp.send_message body, $s_emailfrom, $a_emailalarm
   end
@@ -55,14 +58,22 @@ end
 ##
 
 # Message handler class
+#  Handles internal message outputs depending on the type.
+#  Message.event : Any action can be an event if the hosts status does not change. A line will output to the STDOUT.
+#  Message.error : Whenever something unexpected happens. A line will output to the STDERR.
+#  Message.alarm : Whenever the hosts status changes. In addition to output to the STDOUT, an email can be sent out.
+#  Message.abort : This aborts the program. Likely to be an initial error.
 class Message
   def initialize
   end
   def event(str)
+    $stdout << str << "\n"
   end
   def error(str)
   end
   def alarm(str)
+    $stdout << str << "\n"
+    email(str)
   end
   def abort(str)
     $stderr << "\n" << str << "\n"
@@ -71,6 +82,15 @@ class Message
 end
 
 # Host class
+#  Contain information about the host to be monitored.
+#  Host.ping : Pings the host and returns status. (alive=TRUE, dead=FALSE)
+#  Host.status : Returns status of the host.
+#    INIT=configuring or was never up since start
+#    UP=replied to the ping and is up
+#    DOWN=did not reply to the ping and is assumed to be down
+#  Host.comment : Returns a comment of the host.
+#  Host.lastchange : Returns the time of when the host status last changed.
+#  Host.lastping : Returns the time of when the host was last pinged.
 class Host
   def initialize(ipaddr, comment)
     @timestatuschange = Time.now
@@ -113,7 +133,7 @@ class Host
     @status
   end
   def comment
-    return @comment
+    @comment
   end
   def lastchange
     @timestatuschange
@@ -228,10 +248,12 @@ begin
   loop {
     h_msg = $q_msg.pop
     if $h_host.key?(h_msg['ipaddr'])
-      $stdout << "%f %s %s(%s)\n" % [h_msg['time'].to_f, h_msg['status'], h_msg['ipaddr'], $h_host[h_msg['ipaddr']].comment]
+      str = "%f %s %s(%s)" % [h_msg['time'].to_f, h_msg['status'], h_msg['ipaddr'], $h_host[h_msg['ipaddr']].comment]
     else
-      $stdout << "%f %s\n" % [h_msg['time'].to_f, h_msg['status']]
+      str = "%f %s" % [h_msg['time'].to_f, h_msg['status']]
     end
+    eval("\$msg.#{h_msg['type']}(\"#{str}\")")
+#    p "\$msg.#{h_msg['type']}(\"#{str}\")"
   }
 rescue
   p $!
