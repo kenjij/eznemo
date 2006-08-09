@@ -1,7 +1,7 @@
 #!/usr/bin/ruby
 #
 # eznemo.rb - A simple host monitoring with TCP ping.
-# ver.0.6alpha (2006-08-06)
+# ver.0.6alpha (2006-08-08)
 #
 
 ##
@@ -204,7 +204,7 @@ begin
         end
       when 'SMTP_DOMAIN'
         if val =~ /^[A-Za-z0-9\-\.]+$/
-          $s_smtpserver = val
+          $s_smtpdomain = val
         else
           raise 'wrong value'
         end
