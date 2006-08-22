@@ -1,8 +1,24 @@
 #!/usr/bin/ruby
 #
 # eznemo.rb - A simple host monitoring with TCP ping.
-# ver.0.6alpha (2006-08-08)
+# ver.0.7beta (2006-08-21)
+# (c) 2006 CYANandBLUE
 #
+# License:
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
 
 ##
 ## Dependencies
@@ -15,7 +31,7 @@ require 'thread'
 ##
 ## System parameters
 ##
-S_SYSTEMNAME = 'EzNemo ver.0.6alpha - (c) 2006 CYANandBLUE'
+S_SYSTEMNAME = 'EzNemo ver.0.7beta - (c) 2006 CYANandBLUE'
 I_PINGTIMEOUT_MAX = 10
 I_PINGINTERVAL_MIN = 60
 I_PINGRETRY_MAX = 10
@@ -24,6 +40,7 @@ I_PINGRETRY_MAX = 10
 ##
 ## Default setting (variables will be reset by configuration)
 ##
+$i_pingtcpport = 7
 $i_pingtimeout = 1
 $i_pinginterval = 300
 $i_pingretry = 2
@@ -32,6 +49,7 @@ $i_smtpport = 25
 $s_smtpdomain = ''
 $s_emailfrom = ''
 $a_emailalarm = []
+$s_alarmsubject = 'EzNemo ALARM'
 
 # $q_msg = {'time' => , 'ipaddr' => , 'status' => , 'type' => , }
 $q_msg = Queue.new
@@ -44,7 +62,7 @@ $h_host = {}
 
 # Sends and email through the directed SMTP server.
 def email(body)
-  body = "Subject: EzNemo ALARM\n\n" + body
+  body = "Subject: " + $s_alarmsubject + "\n\n" + body
   Net::SMTP.start($s_smtpserver, $i_smtpport, $s_smtpdomain) do |smtp|
     smtp.send_message body, $s_emailfrom, $a_emailalarm
   end
@@ -66,16 +84,31 @@ end
 class Message
   def initialize
   end
-  def event(str)
+  def event(hash)
+    if $h_host.key?(hash['ipaddr'])
+      str = "%s %s %s(%s)" % [hash['time'].strftime("%Y-%m-%dT%H:%M:%S%Z"), hash['status'], hash['ipaddr'], $h_host[hash['ipaddr']].comment]
+    else
+      str = "%s %s" % [hash['time'].strftime("%Y-%m-%dT%H:%M:%S%Z"), hash['status']]
+    end
     $stdout << str << "\n"
   end
-  def error(str)
+  def error(hash)
   end
-  def alarm(str)
+  def alarm(hash)
+    if $h_host.key?(hash['ipaddr'])
+      str = "%s %s %s(%s)" % [hash['time'].strftime("%Y-%m-%dT%H:%M:%S%Z"), hash['status'], hash['ipaddr'], $h_host[hash['ipaddr']].comment]
+    else
+      str = "%s %s" % [hash['time'].strftime("%Y-%m-%dT%H:%M:%S%Z"), hash['status']]
+    end
     $stdout << str << "\n"
     email(str)
   end
-  def abort(str)
+  def abort(hash)
+    if $h_host.key?(hash['ipaddr'])
+      str = "%f %s %s(%s)" % [hash['time'].to_f, hash['status'], hash['ipaddr'], $h_host[hash['ipaddr']].comment]
+    else
+      str = "%f %s" % [hash['time'].to_f, hash['status']]
+    end
     $stderr << "\n" << str << "\n"
     exit(1)
   end
@@ -101,7 +134,7 @@ class Host
   end
   def ping
     @timeping = Time.now
-    pingstatus = Ping.pingecho(@ipaddr, $i_pingtimeout)
+    pingstatus = Ping.pingecho(@ipaddr, $i_pingtimeout, $i_pingtcpport)
     if pingstatus
       case @status
       when 'INIT'
@@ -220,6 +253,12 @@ begin
         else
           raise 'wrong value'
         end
+      when 'ALARM_SUBJECT'
+        if val =~ /^.+$/
+          $s_alarmsubject << val
+        else
+          raise 'wrong value'
+        end
       else
         raise 'unrecognized varialble'
       end
@@ -247,13 +286,7 @@ begin
   sleep 2
   loop {
     h_msg = $q_msg.pop
-    if $h_host.key?(h_msg['ipaddr'])
-      str = "%f %s %s(%s)" % [h_msg['time'].to_f, h_msg['status'], h_msg['ipaddr'], $h_host[h_msg['ipaddr']].comment]
-    else
-      str = "%f %s" % [h_msg['time'].to_f, h_msg['status']]
-    end
-    eval("\$msg.#{h_msg['type']}(\"#{str}\")")
-#    p "\$msg.#{h_msg['type']}(\"#{str}\")"
+    eval("\$msg.#{h_msg['type']}(h_msg)")
   }
 rescue
   p $!
