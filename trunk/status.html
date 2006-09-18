@@ -15,6 +15,16 @@ table {
   border-collapse: collapse;
   border: solid #666 2px;
 }
+th {
+  background-color: #eee;
+  color: #333;
+  text-align: center;
+  border-top: solid #666 1px;
+  border-right: solid #999 1px;
+  border-bottom: solid #666 1px;
+  border-left: solid #999 1px;
+  padding: 2px 4px;
+}
 td {
   text-align: center;
   border-top: solid #666 1px;
@@ -44,7 +54,7 @@ td.down {
 </head>
 <body>
 <h1>EzNemo Status Report</h1>
-<p>Updated: 2006-09-05 13:14:15
+<p>Updated: <!-- ##UPDATE## -->
 <p><a href="">Monitored Hosts</a> | <a href="">System Statistics</a> | <a href="">System Configuration</a>
 <a name="">
 <h2>Monitored Hosts</h2>
@@ -53,14 +63,15 @@ td.down {
   <th>IP</th><th>Comment</th><th>Status</th>
 </tr>
 <tr>
-  <td>IP</td><td>COMMENT</td><td class="init">INIT</td>
+  <td>IP</td><td>SAMPLE</td><td class="init">INIT</td>
 </tr>
 <tr>
-  <td>IP</td><td>COMMENT</td><td class="up">UP</td>
+  <td>IP</td><td>SAMPLE</td><td class="up">UP</td>
 </tr>
 <tr>
-  <td>IP</td><td>COMMENT</td><td class="down">DOWN</td>
+  <td>IP</td><td>SAMPLE</td><td class="down">DOWN</td>
 </tr>
+<!-- ##HOST## -->
 </table>
 <a name="">
 <h2>System Statistics</h2>
@@ -69,13 +80,15 @@ td.down {
 <tr><td>Up time</td><td>11hours</td></tr>
 <tr><td>Hosts</td><td>5</td></tr>
 <tr><td>Pings</td><td>113</td></tr>
+<!-- ##STAT## -->
 </table>
 <a name="">
 <h2>System Configuration</h2>
 <table>
-<tr><td>PING_TIMEOUT</td><td>1</td></tr>
-<tr><td>PING_INTERVAL</td><td>60</td></tr>
+<tr><th>Variable</th><th>Value</th></tr>
+<tr><td>SAMPLE</td><td>1</td></tr>
+<!-- ##INIT_CONFIG## -->
 </table>
-<p class="footer">EzNemo 0.8beta
+<p class="footer"><!-- ##SYSTEM_NAME## -->
 </body>
 </html>
