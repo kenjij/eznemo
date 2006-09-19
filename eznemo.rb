@@ -1,7 +1,7 @@
 #!/usr/bin/ruby
 #
 # eznemo.rb - A simple host monitoring with TCP ping.
-# ver.0.8beta (2006-09-17)
+# ver.0.8beta (2006-09-18)
 # (c) 2006 CYANandBLUE
 #
 # License:
@@ -27,6 +27,12 @@ require 'ipaddr'
 require 'net/smtp'
 require 'ping'
 require 'thread'
+
+
+## SYSTEM STAT ##
+STAT_STARTTIME = Time.now
+$stat_pingcount = 0
+## SYSTEM STAT ##
 
 
 ##
@@ -56,11 +62,14 @@ $s_emailfrom = ''
 $a_emailalarm = []
 $s_alarmsubject = 'EzNemo ALARM'
 $s_reportpath = './eznemo.html'
+$i_reportinterval = 30
 
 $h_initconfig = {}
 $s_html_initconf = ''
 # $q_msg = {'time' => , 'ipaddr' => , 'status' => , 'type' => , }
 $q_msg = Queue.new
+# $a_hostorder = [ip_addr, ip_addr, ...] (host IP addresses in order)
+$a_hostorder = []
 # $h_host = {ip_addr => comment} (when reading conf)
 # $h_host = {ip_addr => #Host} (at host init)
 $h_host = {}
@@ -116,6 +125,7 @@ class Message
     end
     $stdout << str << "\n"
     email(str)
+    $report.run
   end
   def abort(str)
     self.stderr(str)
@@ -128,38 +138,60 @@ class HTMLReport
   @@template = open('status.html', 'r') {|fp| fp.read}
   def initialize(outputpath)
     @outputpath = outputpath
+    @lastupdate = Time.now
     @h_htmlhost = {}
     @htmlstat = ''
     @htmlinitconf = ''
+    @requireupdate = true
   end
   def update_host(ip)
-    host = $h_host[ip]
-    @h_htmlhost[ip] = "<tr><td>#{ip}</td><td>#{host.comment}</td><td class=\"#{host.status.downcase}\">#{host.status}</td></tr>\n"
+    @h_htmlhost[ip] = "<tr><td>#{ip}</td><td>#{$h_host[ip].comment}</td>"
+    @h_htmlhost[ip] << "<td class=\"#{$h_host[ip].status.downcase}\">#{$h_host[ip].status}</td>"
+    @h_htmlhost[ip] << "<td>#{$h_host[ip].lastchange.strftime(S_REPORTDATEFORMAT)}</td></tr>\n"
+    @requireupdate = true
   end
   def update_hosts
     @h_htmlhost = {}
-    $h_host.each do |ip, host|
-      @h_htmlhost[ip] = "<tr><td>#{ip}</td><td>#{host.comment}</td><td class=\"#{host.status.downcase}\">#{host.status}</td></tr>\n"
-    end
+    $h_host.keys.each {|ip| self.update_host(ip)}
   end
   def update_stat
-    @htmlstat = ''
+    @htmlstat = "<tr><th>Started</th><td>#{STAT_STARTTIME.strftime(S_REPORTDATEFORMAT)}</td></tr>\n"
+    uptime = Time.now - STAT_STARTTIME
+    days = uptime.to_i / (60 * 60 * 24)
+    seconds = uptime.to_i.remainder(60 * 60 * 24)
+    uptime = Time.at(seconds)
+    @htmlstat << "<tr><th>Uptime</th><td> #{days} days #{uptime.gmtime.strftime('%X')}</td></tr>\n"
+    
+    @htmlstat << "<tr><th>Monitored Hosts</th><td>#{$h_host.length}</td></tr>\n"
+    @htmlstat << "<tr><th>Total pings</th><td>#{$stat_pingcount}</td></tr>\n"
+    @requireupdate = true
   end
   def update_initconf
     @htmlinitconf = ''
     $h_initconfig.each do |key, val|
       @htmlinitconf << "<tr><td>#{key}</td><td>#{val}</td></tr>\n"
     end
+    @requireupdate = true
   end
   def run
+    self.update_stat
+    @requireupdate or return
+    @lastupdate = Time.now
     htmloutput = @@template.sub('<!-- ##SYSTEM_NAME## -->', S_SYSTEMNAME)
-    htmloutput = htmloutput.sub('<!-- ##UPDATE## -->', Time.now.strftime(S_REPORTDATEFORMAT))
-    htmloutput = htmloutput.sub('<!-- ##HOST## -->', @h_htmlhost.values.join)
+    htmloutput = htmloutput.sub('<!-- ##REFRESH## -->', '<meta http-equiv="refresh" content="' + $i_reportinterval.to_s + '">')
+    htmloutput = htmloutput.sub('<!-- ##UPDATE## -->', @lastupdate.strftime(S_REPORTDATEFORMAT))
+    a_htmlhost = []
+    $a_hostorder.each {|ip| a_htmlhost << @h_htmlhost[ip]}
+    htmloutput = htmloutput.sub('<!-- ##HOST## -->', a_htmlhost.join)
     htmloutput = htmloutput.sub('<!-- ##STAT## -->', @htmlstat)
     htmloutput = htmloutput.sub('<!-- ##INIT_CONFIG## -->', @htmlinitconf)
     fp_report = open(@outputpath, 'w')
     fp_report.print(htmloutput)
     fp_report.close
+    @requireupdate = false
+  end
+  def lastupdate
+    @lastupdate
   end
 end
 
@@ -188,22 +220,26 @@ class Host
       case @status
       when 'INIT'
         @timestatuschange = @timeping
+        @status = 'UP'
         type = 'event'
+        $report.update_host(@ipaddr)
       when 'UP'
         type = 'event'
       when 'DOWN'
         @timestatuschange = @timeping
+        @status = 'UP'
         type = 'alarm'
+        $report.update_host(@ipaddr)
       end
-      @status = 'UP'
     else
       case @status
       when 'INIT'
         type = 'event'
       when 'UP'
         @timestatuschange = @timeping
-        type = 'alarm'
         @status = 'DOWN'
+        type = 'alarm'
+        $report.update_host(@ipaddr)
       when 'DOWN'
         type = 'event'
       end
@@ -324,6 +360,7 @@ begin
     elsif /^([\.\d]{7,15}) *= *(.+)$/ =~ line
       ipaddr = IPAddr.new($1)
       $h_host[ipaddr.to_s] = $2
+      $a_hostorder << ipaddr.to_s
     else
       raise 'syntax error'
     end
@@ -336,14 +373,12 @@ $msg.stderr("done.")
 
 $report = HTMLReport.new($s_reportpath)
 $report.update_initconf
-$report.run
 
 
 ##
 ## Message handling thread
 ##
 $msg.stderr("MSG: Starting message handler.")
-#$q_msg << {'time' => Time.now, 'ipaddr' => localhost, 'status' => 'MSG: Up.', 'type' => 'event'}
 Thread.start {
 begin
   $q_msg << {'time' => Time.now, 'ipaddr' => 'localhost', 'status' => 'Up and running: ' + S_SYSTEMNAME, 'type' => 'event'}
@@ -364,6 +399,7 @@ end
 $msg.stderr("MONITOR: Starting #{$h_host.length} host monitoring sessions.")
 $h_host.each do |ipaddr, comment|
   $h_host[ipaddr] = Host.new(ipaddr, comment)
+  $report.update_host(ipaddr)
   Thread.start {
     loop {
       $h_host[ipaddr].ping
@@ -373,8 +409,21 @@ $h_host.each do |ipaddr, comment|
 end
 
 
-$report.update_hosts
-$report.run
+##
+## HTML Report thread
+##
+$msg.stderr("REPORT: Starting HTML reporting.")
+Thread.start {
+begin
+  loop {
+    start = Time.now
+    $report.run
+    sleep $i_reportinterval - (Time.now - start)
+  }
+rescue
+  p $!
+end
+}
 
 
 ##
