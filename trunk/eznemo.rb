@@ -1,8 +1,8 @@
 #!/usr/bin/ruby
 #
 # eznemo.rb - A simple host monitoring with TCP ping.
-# ver.0.8beta (2006-09-18)
-# (c) 2006 CYANandBLUE
+# ver.0.8.1beta (2006-09-18)
+# (c) 2006 CYAN+BLUE
 #
 # License:
 # This program is free software; you can redistribute it and/or
@@ -38,7 +38,7 @@ $stat_pingcount = 0
 ##
 ## System parameters
 ##
-S_SYSTEMNAME = 'EzNemo ver.0.8beta - (c) 2006 CYANandBLUE'
+S_SYSTEMNAME = 'EzNemo ver.0.8.1beta - (c) 2006 CYAN+BLUE'
 I_PINGTIMEOUT_MAX = 10
 I_PINGINTERVAL_MIN = 60
 I_PINGRETRY_MAX = 10
@@ -168,8 +168,9 @@ class HTMLReport
   end
   def update_initconf
     @htmlinitconf = ''
-    $h_initconfig.each do |key, val|
-      @htmlinitconf << "<tr><td>#{key}</td><td>#{val}</td></tr>\n"
+    keyorder = $h_initconfig.keys.sort
+    keyorder.each do |key|
+      @htmlinitconf << "<tr><td>#{key}</td><td>#{$h_initconfig[key]}</td></tr>\n"
     end
     @requireupdate = true
   end
@@ -216,6 +217,7 @@ class Host
   def ping
     @timeping = Time.now
     pingstatus = Ping.pingecho(@ipaddr, $i_pingtimeout, $i_pingport)
+    $stat_pingcount += 1
     if pingstatus
       case @status
       when 'INIT'
