@@ -1,7 +1,7 @@
 #!/usr/bin/ruby
 #
 # eznemo.rb - A simple host monitoring with TCP ping.
-# ver.0.8.1beta (2006-09-18)
+# ver.0.8.2beta (2006-10-11)
 # (c) 2006 CYAN+BLUE
 #
 # License:
@@ -61,7 +61,7 @@ $s_smtpdomain = ''
 $s_emailfrom = ''
 $a_emailalarm = []
 $s_alarmsubject = 'EzNemo ALARM'
-$s_reportpath = './eznemo.html'
+$s_reportpath = ''
 $i_reportinterval = 30
 
 $h_initconfig = {}
@@ -356,6 +356,16 @@ begin
         else
           raise "wrong value : #{key}=#{val}"
         end
+      when 'REPORT_PATH'
+        if /^.+$/ =~ val
+          if FileTest.writable?(val)
+            $s_reportpath = val
+          else
+            raise ""
+          end
+        else
+          raise "wrong value : #{key}=#{val}"
+        end
       else
         raise 'unrecognized varialble'
       end
@@ -414,19 +424,20 @@ end
 ##
 ## HTML Report thread
 ##
-$msg.stderr("REPORT: Starting HTML reporting.")
-Thread.start {
-begin
-  loop {
-    start = Time.now
-    $report.run
-    sleep $i_reportinterval - (Time.now - start)
+if not $s_reportpath.empty?
+  $msg.stderr("REPORT: Starting HTML reporting.")
+  Thread.start {
+    begin
+      loop {
+        start = Time.now
+        $report.run
+        sleep $i_reportinterval - (Time.now - start)
+      }
+    rescue
+      p $!
+    end
   }
-rescue
-  p $!
 end
-}
-
 
 ##
 ## Put main thread to sleep
