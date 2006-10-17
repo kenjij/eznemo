@@ -40,7 +40,8 @@ $stat_pingcount = 0
 ##
 S_SYSTEMNAME = 'EzNemo ver.0.8.1beta - (c) 2006 CYAN+BLUE'
 I_PINGTIMEOUT_MAX = 10
-I_PINGINTERVAL_MIN = 60
+I_PINGINTERVAL_MIN = 30
+I_REPORTINTERVAL_MIN = 10
 I_PINGRETRY_MAX = 10
 S_HTMLBASEPATH = './status.html'
 
@@ -62,7 +63,7 @@ $s_emailfrom = ''
 $a_emailalarm = []
 $s_alarmsubject = 'EzNemo ALARM'
 $s_reportpath = ''
-$i_reportinterval = 30
+$i_reportinterval = 60
 
 $h_initconfig = {}
 $s_html_initconf = ''
@@ -361,7 +362,16 @@ begin
           if FileTest.writable?(val)
             $s_reportpath = val
           else
-            raise ""
+            raise "file error : does not exist or cannot write"
+          end
+        else
+          raise "wrong value : #{key}=#{val}"
+        end
+      when 'REPORT_INTERVAL'
+        if /^\d+$/ =~ val
+          $i_reportinterval = val.to_i
+          if I_REPORTINTERVAL_MIN > $i_reportinterval
+            raise "value out of range : #{key}=#{val}"
           end
         else
           raise "wrong value : #{key}=#{val}"
