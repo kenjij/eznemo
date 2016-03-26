@@ -1,0 +1,13 @@
+#!/usr/bin/env ruby
+require 'kajiki'
+require 'eznemo'
+
+
+opts = Kajiki.preset_options(:simple, {config: true})
+
+Kajiki.run(opts) do |cmd|
+  case cmd
+  when 'start'
+    EzNemo::Reactor.run!(opts)
+  end
+end
