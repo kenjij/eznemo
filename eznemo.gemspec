@@ -20,5 +20,4 @@ Gem::Specification.new do |s|
 
   s.add_runtime_dependency 'kajiki', '~> 1.1'
   s.add_runtime_dependency 'eventmachine', '~> 1.0'
-  # s.add_runtime_dependency 'mysql2', '~> 0.4'
 end
