@@ -3,7 +3,11 @@ module EzNemo
   # ICMP ping plugin
   class Ping
 
+    DEFAULT_MIN_INTERVAL = 10
+    DEFAULT_TIMEOUT = 5
+
     attr_reader :monitor
+    attr_reader :config
 
     def initialize
       os = RbConfig::CONFIG['host_os']
@@ -25,12 +29,18 @@ module EzNemo
     # @param mon [Object] parent Monitor object
     def registered(mon)
       @monitor = mon
+      @config = EzNemo.config[:monitor][:ping] if EzNemo.config[:monitor]
+      @config ||= {}
+      @config[:path] ||= 'ping'
+      @config[:min_interval] ||= DEFAULT_MIN_INTERVAL
+      @config[:timeout] ||= DEFAULT_TIMEOUT
     end
 
     # Add a check using this plugin
     # @param check [Hash]
     def add_check(check)
-      check[:interval] = MIN_INTERVAL if check[:interval] < MIN_INTERVAL
+      min = config[:min_interval]
+      check[:interval] = min if check[:interval] < min
       EM.add_periodic_timer(check[:interval]) do
         self.send("#{@os}_ping", check)
       end
@@ -41,7 +51,11 @@ module EzNemo
         timestamp: Time.now,
         check_id: check[:id]
       }
-      cmd = "ping -c 1 -nqW 4 #{check[:hostname]}"
+      path = config[:path]
+      timeout = config[:timeout]
+      options = config[:cmd_opts]
+      hostname = check[:hostname]
+      cmd = "#{path} -c 1 -nqW #{timeout} #{options} #{hostname}"
       EM.system(cmd) do |output, status|
         case status.exitstatus
         when 0
@@ -69,7 +83,10 @@ module EzNemo
         timestamp: Time.now,
         check_id: check[:id]
       }
-      cmd = "ping -c 1 -nqW 4000 #{check[:hostname]}"
+      timeout = config[:timeout] * 1000
+      options = config[:cmd_opts]
+      hostname = check[:hostname]
+      cmd = "#{path} -c 1 -nqW #{timeout} #{options} #{hostname}"
       EM.system(cmd) do |output, status|
         case status.exitstatus
         when 0

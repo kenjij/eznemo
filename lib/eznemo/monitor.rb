@@ -2,8 +2,6 @@ require 'json'
 
 module EzNemo
 
-  MIN_INTERVAL = 10
-
   # The shared Monitor instance
   # @return [EzNemo::Monitor]
   def self.monitor
@@ -27,7 +25,7 @@ module EzNemo
     # Starts check loops in the reactor
     # @param checks [Array<Hash, ...>]
     def start_checks(checks)
-      cfg_tags = EzNemo.config[:datastore][:tags]
+      cfg_tags = EzNemo.config[:checks][:tags]
       i = 0
       checks.each do |c|
         if cfg_tags

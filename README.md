@@ -2,6 +2,8 @@
 
 A Ruby gem. It's a simple monitoring engine and stores results in a database. Runs on EventMachine.
 
+For reports and alerts, analyze the results in the database.
+
 ## Requirements
 
 - Ruby 2.0.0 <=
@@ -9,7 +11,7 @@ A Ruby gem. It's a simple monitoring engine and stores results in a database. Ru
 
 ### Data Storage Options
 
-Currently, only support MySQL, so you'll need the following gem:
+Currently, only support MySQL, so you'll also need the following gem:
 
 - mysql2 0.4 <=
 
@@ -23,7 +25,7 @@ $ gem install eznemo
 
 ### Use
 
-```ruby
+```
 $ eznemo start -c config.yml
 ```
 
@@ -40,9 +42,15 @@ Config file.
     :username: 'user'
     :password: 'paSsw0rd'
     :database: 'eznemo'
+:checks:
   :tags:
     - tag1
     - tag2
+:monitor:
+    :path: '/bin/ping'
+    :min_interval: 10
+    :timeout: 5
+    :cmd_opts: '-s 102'
 ```
 
 ## Data Structure
@@ -51,14 +59,14 @@ Config file.
 
 ```ruby
 {
-  id: 123, # auto_increment
-  name: "Check name",
-  hostname: "IP address or hostname",
-  interval: 60, # frequecy this check is run in seconds
-  type: "ping; or other monitor plugin name",
-  state: true, # true means active
-  tags: "["tag1", "tag2"]",
-  options: "-S 192.168.0.11"
+  id: 123,   # auto_increment
+  name: 'Check name',
+  hostname: '192.168.0.111',
+  interval: 60,   # frequecy this check is run in seconds
+  type: 'ping",   # or other monitor plugin name
+  state: true,   # true means active
+  tags: '["tag1", "tag2"]',
+  options: '-S 192.168.0.11'
 }
 ```
 
@@ -66,10 +74,39 @@ Config file.
 
 ```ruby
 {
-  check_id: 123, # from checks
+  check_id: 123,   # from checks
   timestamp: '2016-04-01 10:00:00 -07:00',
-  status: true, # true means OK
-  response_ms: 0.012, # in milliseconds
-  status_desc: "OK; short description of the result"
+  status: true,   # true means OK
+  response_ms: 0.012,   # in milliseconds
+  status_desc: 'OK'   # short description of the result
 }
+```
+
+### MySQL
+
+```sql
+CREATE TABLE `checks` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) NOT NULL DEFAULT '',
+  `hostname` varchar(255) NOT NULL DEFAULT '',
+  `interval` int(11) NOT NULL,
+  `type` varchar(255) NOT NULL DEFAULT '',
+  `state` tinyint(1) NOT NULL,
+  `tags` text,
+  `options` text,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE TABLE `results` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `check_id` int(11) NOT NULL,
+  `timestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `status` tinyint(1) NOT NULL,
+  `response_ms` float NOT NULL DEFAULT '0',
+  `status_desc` varchar(255) NOT NULL DEFAULT '',
+  PRIMARY KEY (`id`),
+  KEY `check_id` (`check_id`),
+  KEY `timestamp` (`timestamp`),
+  KEY `status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 ```

@@ -25,27 +25,26 @@ module EzNemo
 
       require 'eznemo/monitor'
       require 'eznemo/monitor/ping'
-      # require 'eznemo/monitor/http'
     end
 
     # Usually called by #self.run!
     def run
-      d = EzNemo.datastore
+      ds = EzNemo.datastore
 
       Signal.trap('INT') do
         puts 'Interrupted. Flushing...'
-        d.flush
+        ds.flush
         exit
       end
 
       Signal.trap('SIGTERM') do
         puts 'Stopping...'
-        d.flush
+        ds.flush
         exit
       end
       
       EM.run do
-        EzNemo.monitor.start_checks(d.checks)
+        EzNemo.monitor.start_checks(ds.checks)
       end
     end
 
