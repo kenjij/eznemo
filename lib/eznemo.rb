@@ -20,7 +20,7 @@ module EzNemo
     def initialize(opts)
       c = EzNemo.load_config(opts[:config])
 
-      require "eznemo/#{c[:datastore][:type].to_s}"
+      require "eznemo/#{c[:datastore][:type]}"
       require 'eznemo/datastore'
 
       require 'eznemo/monitor'
