@@ -11,6 +11,7 @@ module EzNemo
 
     def initialize
       @results = []
+      @probe = EzNemo.config[:probe][:name]
       @opts = EzNemo.config[:datastore][:options]
       @opts[:flags] = Mysql2::Client::MULTI_STATEMENTS
     end
@@ -51,6 +52,7 @@ module EzNemo
       sync ? db = database : db = emdatabase
       stmt = ''
       @results.each do |r|
+        r[:probe] = @probe
         r[:status_desc] = db.escape(r[:status_desc])
         cols = r.keys.join(',')
         vals = r.values.join("','")
