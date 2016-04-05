@@ -51,6 +51,7 @@ Config file.
     - tag1
     - tag2
 :monitor:
+  :ping:   # all optional
     :path: '/bin/ping'
     :min_interval: 10
     :timeout: 5
@@ -112,6 +113,7 @@ CREATE TABLE `results` (
   `status_desc` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `check_id` (`check_id`),
+  KEY `probe` (`probe`),
   KEY `timestamp` (`timestamp`),
   KEY `status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
