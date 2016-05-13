@@ -1,5 +1,3 @@
-require 'json'
-
 module EzNemo
 
   # The shared Monitor instance

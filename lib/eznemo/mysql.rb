@@ -22,12 +22,6 @@ module EzNemo
       @opts[:flags] = Mysql2::Client::MULTI_STATEMENTS
     end
 
-    # Creates and returns new instance of {Mysql2::Client}
-    # @return [Mysql2::Client]
-    def database
-      Mysql2::Client.new(@opts)
-    end
-
     # Creates and returns new instance of {Mysql2::EM::Client}
     # @return [Mysql2::EM::Client]
     def emdatabase
@@ -39,7 +33,6 @@ module EzNemo
     def checks
       checks_with_tags(EzNemo.config[:checks][:tags])
     end
-
 
     # Returns all active checks matching all tags
     # @param tags [Array<String, ...>] list of tag text
