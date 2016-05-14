@@ -6,9 +6,11 @@ require 'thread'
 module EzNemo
 
   # Sequel connection setup
+  Sequel.application_timezone = :local
+  Sequel.database_timezone = :utc
   Sequel::Model.db = Sequel.connect({adapter: 'mysql2'}.merge(config[:datastore][:options]))
 
-  # Defines DataStorage class for MySQL
+  # Defines DataStore class for MySQL
   module StorageAdapter
 
     # Number of records it queues up before writing
@@ -81,15 +83,7 @@ module EzNemo
       else
         db = emdatabase
         stmt = ''
-        @results.each do |r|
-          # r[:probe] = @probe
-          r[:status_desc] = db.escape(r[:status_desc])
-          cols = r.values.keys.join(',')
-          # find and convert boolean values to integer
-          vals = r.values.values.map { |v| !!v == v ? (v ? 1 : 0) : v }
-          vals = vals.join("','")
-          stmt << "INSERT INTO results (#{cols}) VALUES ('#{vals}');"
-        end
+        @results.each { |r| stmt << Result.dataset.insert_sql(r) + ';' }
         defer = db.query(stmt)
         defer.callback do
         end

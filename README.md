@@ -81,7 +81,7 @@ Config file.
 {
   check_id: 123,   # from checks
   probe: 'Probe01',
-  timestamp: '2016-04-01 10:00:00 -07:00',
+  timestamp: '2016-04-01 10:00:00 -0700',
   status: true,   # true means OK
   response_ms: 0.012,   # in milliseconds
   status_desc: 'OK'   # short description of the result
@@ -107,10 +107,10 @@ CREATE TABLE `checks` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(255) NOT NULL DEFAULT '',
   `hostname` varchar(255) NOT NULL DEFAULT '',
-  `interval` int(11) NOT NULL,
+  `interval` int(11) NOT NULL COMMENT 'in seconds',
   `type` varchar(255) NOT NULL DEFAULT '',
   `state` tinyint(1) NOT NULL,
-  `options` text,
+  `options` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`),
   CLUSTERING KEY `state` (`state`)
 ) ENGINE=TokuDB DEFAULT CHARSET=utf8;
@@ -119,10 +119,10 @@ CREATE TABLE `results` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `check_id` int(11) NOT NULL,
   `probe` varchar(255) NOT NULL DEFAULT '',
-  `timestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `timestamp` datetime NOT NULL COMMENT 'in utc',
   `status` tinyint(1) NOT NULL,
   `response_ms` float NOT NULL DEFAULT '0',
-  `status_desc` varchar(255) DEFAULT NULL,
+  `status_desc` varchar(255) NOT NULL DEFAULT '',
   PRIMARY KEY (`id`),
   CLUSTERING KEY `check_id` (`check_id`),
   KEY `probe` (`probe`),
@@ -133,7 +133,7 @@ CREATE TABLE `results` (
 CREATE TABLE `tags` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
   `check_id` int(11) NOT NULL,
-  `text` varchar(63) NOT NULL DEFAULT '',
+  `text` varchar(255) NOT NULL DEFAULT '',
   PRIMARY KEY (`id`),
   KEY `check_id` (`check_id`),
   CLUSTERING KEY `text` (`text`)
