@@ -37,7 +37,7 @@ module EzNemo
     end
 
     # Add a check using this plugin
-    # @param check [Hash]
+    # @param check [EzNemo::Check]
     def add_check(check)
       min = config[:min_interval]
       check[:interval] = min if check[:interval] < min
@@ -47,65 +47,82 @@ module EzNemo
     end
 
     def linux_ping(check)
-      result = {
-        timestamp: Time.now,
-        check_id: check[:id]
-      }
-      path = config[:path]
-      timeout = config[:timeout]
-      options = "#{config[:cmd_opts]} #{check[:options]}"
-      hostname = check[:hostname]
-      cmd = "#{path} -c 1 -nqW #{timeout} #{options} #{hostname}"
-      EM.system(cmd) do |output, status|
+      result = create_result_for_check(check)
+      EM.system(build_cmd(check)) do |output, status|
         case status.exitstatus
         when 0
           expr = /=\s*([0-9\.]+)/
           expr =~ output
-          result[:status] = 1
-          result[:response_ms] = $1.to_f
-          result[:status_desc] = 'OK'
+          set_ok_result(result, $1.to_f)
         when 1
-          result[:status] = 0
-          result[:response_ms] = 0
-          result[:status_desc] = 'NG'
+          set_ng_result(result)
         else
-          output = 'see log' if output.nil? || output.size == 0
-          result[:status] = 0
-          result[:response_ms] = 0
-          result[:status_desc] = "ERROR: #{output}".chomp
+          set_error_result(result, output)
         end
         monitor.report(result)
       end
     end
 
     def bsd_ping(check)
-      result = {
-        timestamp: Time.now,
-        check_id: check[:id]
-      }
-      timeout = config[:timeout] * 1000
-      options = "#{config[:cmd_opts]} #{check[:option]}"
-      hostname = check[:hostname]
-      cmd = "#{path} -c 1 -nqW #{timeout} #{options} #{hostname}"
-      EM.system(cmd) do |output, status|
+      result = create_result_for_check(check)
+      args = {timeout: config[:timeout] * 1000}
+      EM.system(build_cmd(check, args)) do |output, status|
         case status.exitstatus
         when 0
           expr = /=\s*([0-9\.]+)/
           expr =~ output
-          result[:status] = 1
-          result[:response_ms] = $1.to_f
-          result[:status_desc] = 'OK'
+          set_ok_result(result, $1.to_f)
         when 2
-          result[:status] = 0
-          result[:response_ms] = 0
-          result[:status_desc] = 'NG'
+          set_ng_result(result)
         else
-          result[:status] = 0
-          result[:response_ms] = 0
-          result[:status_desc] = "ERROR: #{output}".chomp
+          set_error_result(result, output)
         end
         monitor.report(result)
       end
+    end
+
+    private
+
+    # @param check [EzNemo::Check]
+    # @return [EzNemo::Result]
+    def create_result_for_check(check)
+      Result::new do |r|
+        r.timestamp = Time.now
+        r.check = check
+        r.probe = EzNemo.config[:probe][:name]
+      end
+    end
+
+    # @param check [EzNemo::Check]
+    # @param args [Hash] overriding arguments
+    def build_cmd(check, args = {})
+      h = {
+        path: config[:path],
+        timeout: config[:timeout],
+        options: "#{config[:cmd_opts]} #{check[:options]}",
+        hostname: check[:hostname]
+      }
+      h.merge!(args)
+      "#{h[:path]} -c 1 -nqW #{h[:timeout]} #{h[:options]} #{h[:hostname]}"
+    end
+
+    def set_ok_result(result, ms)
+      result.status = true
+      result.response_ms = ms
+      result.status_desc = 'OK'
+    end
+
+    def set_ng_result(result)
+      result.status = false
+      result.response_ms = 0
+      result.status_desc = 'NG'
+    end
+
+    def set_err_result(result, msg)
+      msg = 'see log' if msg.nil? || msg.size == 0
+      result.status = false
+      result.response_ms = 0
+      result.status_desc = "ERROR: #{msg}".chomp
     end
 
   end

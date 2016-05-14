@@ -32,7 +32,7 @@ module EzNemo
       ds = EzNemo.datastore
 
       Signal.trap('INT') do
-        puts 'Interrupted. Flushing...'
+        puts 'Interrupted.'
         ds.flush
         exit
       end

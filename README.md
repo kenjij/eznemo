@@ -40,7 +40,8 @@ Config file.
 :probe:
   :name: Probe01
 :datastore:
-  :type: :mysql
+  :type: :mysql   # currently the only option
+  :queue_size: 20
   :options:
     :host: 127.0.0.1
     :username: user
@@ -70,7 +71,6 @@ Config file.
   interval: 60,   # frequecy this check is run in seconds
   type: 'ping',   # or other monitor plugin name
   state: true,   # true means active
-  tags: '["tag1", "tag2"]',
   options: '-S 192.168.0.11'
 }
 ```
@@ -81,40 +81,61 @@ Config file.
 {
   check_id: 123,   # from checks
   probe: 'Probe01',
-  timestamp: '2016-04-01 10:00:00 -07:00',
+  timestamp: '2016-04-01 10:00:00 -0700',
   status: true,   # true means OK
   response_ms: 0.012,   # in milliseconds
   status_desc: 'OK'   # short description of the result
 }
 ```
 
+### Tags
+
+```ruby
+{
+  check_id: 123,   # from checks
+  text: 'prod'   # tag text
+}
+```
+
+
 ### MySQL
+
+Example using TokuDB.
 
 ```sql
 CREATE TABLE `checks` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(255) NOT NULL DEFAULT '',
   `hostname` varchar(255) NOT NULL DEFAULT '',
-  `interval` int(11) NOT NULL,
+  `interval` int(11) NOT NULL COMMENT 'in seconds',
   `type` varchar(255) NOT NULL DEFAULT '',
   `state` tinyint(1) NOT NULL,
-  `tags` text,
-  `options` text,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+  `options` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  CLUSTERING KEY `state` (`state`)
+) ENGINE=TokuDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE `results` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `check_id` int(11) NOT NULL,
   `probe` varchar(255) NOT NULL DEFAULT '',
-  `timestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `timestamp` datetime NOT NULL COMMENT 'in utc',
   `status` tinyint(1) NOT NULL,
   `response_ms` float NOT NULL DEFAULT '0',
-  `status_desc` varchar(255) DEFAULT NULL,
+  `status_desc` varchar(255) NOT NULL DEFAULT '',
   PRIMARY KEY (`id`),
-  KEY `check_id` (`check_id`),
+  CLUSTERING KEY `check_id` (`check_id`),
   KEY `probe` (`probe`),
   KEY `timestamp` (`timestamp`),
   KEY `status` (`status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=TokuDB DEFAULT CHARSET=utf8;
+
+CREATE TABLE `tags` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `check_id` int(11) NOT NULL,
+  `text` varchar(255) NOT NULL DEFAULT '',
+  PRIMARY KEY (`id`),
+  KEY `check_id` (`check_id`),
+  CLUSTERING KEY `text` (`text`)
+) ENGINE=TokuDB DEFAULT CHARSET=utf8;
 ```
