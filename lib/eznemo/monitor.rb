@@ -29,7 +29,7 @@ module EzNemo
         p.add_check(c)
         i += 1
       end
-      puts "#{i} checks activated."
+      EzNemo.logger.info "#{i} checks activated."
     end
 
     # Report result; usually called by the plugin

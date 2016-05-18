@@ -34,6 +34,7 @@ module EzNemo
       @config[:path] ||= 'ping'
       @config[:min_interval] ||= DEFAULT_MIN_INTERVAL
       @config[:timeout] ||= DEFAULT_TIMEOUT
+      EzNemo.logger.info 'Ping plugin registered.'
     end
 
     # Add a check using this plugin

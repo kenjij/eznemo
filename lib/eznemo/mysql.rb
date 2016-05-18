@@ -69,16 +69,13 @@ module EzNemo
     # @param sync [Boolean] use EM (async) if false
     # @return [Object] Mysql2 client instance
     def write_results(sync = false)
+      logger = EzNemo.logger
       return nil if @results.empty?
       if sync
-        # Sequel won't run after trap; run in another thread
-        thr = Thread.new do
-          puts 'Flushing in another thread...'
-          Result.db.transaction do
-            @results.each { |r| r.save}
-          end
+        logger.debug 'Writing to DB...'
+        Result.db.transaction do
+          @results.each { |r| r.save}
         end
-        thr.join
         return true
       else
         db = emdatabase
@@ -88,7 +85,7 @@ module EzNemo
         defer.callback do
         end
         defer.errback do |r|
-          puts r.message
+          logger.error r.message
           db.close if db.ping
         end
       end
@@ -98,11 +95,17 @@ module EzNemo
 
     # Flush queue to storage
     def flush
-      if write_results(true)
-        puts "Flushed."
-      else
-        puts "Nothing to flush."
+      logger = EzNemo.logger
+      # Won't run after trap; run in another thread
+      thr = Thread.new do
+        logger.debug 'Spawned flushing thread.'
+        if write_results(true)
+          logger.info "Flushed."
+        else
+          logger.info "Nothing to flush."
+        end
       end
+      thr.join
     end
 
   end

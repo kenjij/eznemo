@@ -39,6 +39,8 @@ Config file.
 ---
 :probe:
   :name: Probe01
+  :logger: 'Logger.new(STDOUT)'
+  :log_level: 'Logger::WARN'
 :datastore:
   :type: :mysql   # currently the only option
   :queue_size: 20

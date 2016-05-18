@@ -1,3 +1,4 @@
+require 'eznemo/logger'
 require 'eznemo/config'
 require 'eznemo/version'
 require 'eventmachine'
@@ -19,16 +20,21 @@ module EzNemo
     # Usually called by #self.run!
     def initialize(opts)
       c = EzNemo.load_config(opts[:config])
-
+      p = c[:probe]
+      EzNemo.logger = eval(p[:logger]) if p[:logger].class == String
+      logger = EzNemo.logger
+      logger.level = eval(p[:log_level]) if p[:log_level].class == String
+      logger.debug 'Loading datastore adapter...'
       require "eznemo/#{c[:datastore][:type]}"
       require 'eznemo/datastore'
-
+      logger.debug 'Loading monitoring plugins...'
       require 'eznemo/monitor'
       require 'eznemo/monitor/ping'
     end
 
     # Usually called by #self.run!
     def run
+      logger = EzNemo.logger
       ds = EzNemo.datastore
 
       Signal.trap('INT') do
@@ -44,6 +50,7 @@ module EzNemo
       end
       
       EM.run do
+        logger.debug 'Loading checks...'
         EzNemo.monitor.start_checks(ds.checks)
       end
     end
