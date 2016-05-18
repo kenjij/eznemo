@@ -52,6 +52,7 @@ module EzNemo
       EM.run do
         logger.debug 'Loading checks...'
         EzNemo.monitor.start_checks(ds.checks)
+        ds.start_loop
       end
     end
 

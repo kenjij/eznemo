@@ -44,6 +44,7 @@ Config file.
 :datastore:
   :type: :mysql   # currently the only option
   :queue_size: 20
+  :queue_interval: 60   # if present, queue_size will be ignored
   :options:
     :host: 127.0.0.1
     :username: user
