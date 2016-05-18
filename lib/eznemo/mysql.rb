@@ -20,6 +20,7 @@ module EzNemo
       @results = []
       @queue_size = EzNemo.config[:datastore][:queue_size]
       @queue_size ||= DEFAULT_QUEUE_SIZE
+      @queue_interval = EzNemo.config[:datastore][:queue_interval]
       @opts = EzNemo.config[:datastore][:options]
       @opts[:flags] = Mysql2::Client::MULTI_STATEMENTS
     end
@@ -56,11 +57,24 @@ module EzNemo
       final_ids
     end
 
+    # Register EventMachine blocks
+    def start_loop
+      return unless @queue_interval
+      logger = EzNemo.logger
+      logger.info 'Registering MySQL EM block...'
+      EM.add_periodic_timer(@queue_interval) do
+        EzNemo.logger.debug 'Queue interval time arrived.'
+        write_results
+      end
+    end
+
     # Stores a result; into queue first
     # @param result [Hash] (see {EzNemo::Monitor#report})
     def store_result(result)
       @results << result
+      return if @queue_interval
       if @results.count >= @queue_size
+        EzNemo.logger.debug 'Queue is full.'
         write_results
       end
     end
@@ -69,16 +83,13 @@ module EzNemo
     # @param sync [Boolean] use EM (async) if false
     # @return [Object] Mysql2 client instance
     def write_results(sync = false)
+      logger = EzNemo.logger
       return nil if @results.empty?
       if sync
-        # Sequel won't run after trap; run in another thread
-        thr = Thread.new do
-          puts 'Flushing in another thread...'
-          Result.db.transaction do
-            @results.each { |r| r.save}
-          end
+        logger.debug 'Writing to DB...'
+        Result.db.transaction do
+          @results.each { |r| r.save}
         end
-        thr.join
         return true
       else
         db = emdatabase
@@ -86,9 +97,10 @@ module EzNemo
         @results.each { |r| stmt << Result.dataset.insert_sql(r) + ';' }
         defer = db.query(stmt)
         defer.callback do
+          logger.debug 'Wrote to DB async.'
         end
         defer.errback do |r|
-          puts r.message
+          logger.error r.message
           db.close if db.ping
         end
       end
@@ -98,11 +110,17 @@ module EzNemo
 
     # Flush queue to storage
     def flush
-      if write_results(true)
-        puts "Flushed."
-      else
-        puts "Nothing to flush."
+      logger = EzNemo.logger
+      # Won't run after trap; run in another thread
+      thr = Thread.new do
+        logger.debug 'Spawned flushing thread.'
+        if write_results(true)
+          logger.info "Flushed."
+        else
+          logger.info "Nothing to flush."
+        end
       end
+      thr.join
     end
 
   end
