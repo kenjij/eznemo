@@ -7,8 +7,8 @@ Gem::Specification.new do |s|
   s.version       = EzNemo::Version
   s.authors       = ['Ken J.']
   s.email         = ['kenjij@gmail.com']
-  s.description   = %q{Simple network monitoring}
-  s.summary       = %q{Simple network monitoring implemented with Ruby.}
+  s.summary       = %q{Simple network monitoring}
+  s.description   = %q{Simple network monitoring implemented with Ruby.}
   s.homepage      = 'https://github.com/kenjij/eznemo'
   s.license       = 'MIT'
 
